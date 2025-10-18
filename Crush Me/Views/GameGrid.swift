@@ -19,24 +19,30 @@ struct GameGrid: View {
                         row: row, col: col, game: game, geo: geo
                     )}
                     .aspectRatio(contentMode: .fit)
-                    
+                    .scaleEffect(game.isSelected(row: row, col: col) ? 1.2 : 1.0)
+                    .rotationEffect(game.isSelected(row: row, col: col) ?.degrees(3) : .degrees(0))
+                    .shadow(color: game.isSelected(row: row, col: col) ? .yellow.opacity(0.8) : .clear, radius: 10)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.5), value: game.isSelected(row: row, col: col))
                 }
             }
         }
         .padding(12)
         .background(.purple)
         .overlay {
-            Button(action: {
-                game.gameStart()
-            }){
-                Text("Game start")
-                    .bold()
-                    .font(.largeTitle)
-                    .padding()
-                    .foregroundStyle(.white)
-                    .background(.purple)
-                    .cornerRadius(12)
+            if !game.isPlaying{
+                Button(action: {
+                    game.gameStart()
+                }){
+                    Text("Game start")
+                        .bold()
+                        .font(.largeTitle)
+                        .padding()
+                        .foregroundStyle(.white)
+                        .background(.purple)
+                        .cornerRadius(12)
+                }
             }
+            
         }
         
     }

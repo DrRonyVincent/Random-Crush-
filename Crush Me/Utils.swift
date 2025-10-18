@@ -82,4 +82,10 @@ enum IconType: CaseIterable, Equatable {
     }
 }
 
-
+struct CustomButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.bold()
+            .scaleEffect(configuration.isPressed ? 1.4: 1)
+            .animation(.spring, value: configuration.isPressed)
+    }
+}

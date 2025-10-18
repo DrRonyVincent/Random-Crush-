@@ -16,7 +16,7 @@ struct GameButton: View {
     
     var body: some View {
         Button (action: {
-            
+            game.tryProcess(row: row, col: col)
         }){
             Rectangle()
                 .frame(width: nil, height: geo.size.width)
@@ -33,6 +33,7 @@ struct GameButton: View {
                     }
                 }
         }
+        .buttonStyle(CustomButtonStyle())
     }
 }
 
