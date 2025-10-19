@@ -26,8 +26,8 @@ struct GameGrid: View {
                 }
             }
         }
-        .padding(12)
-        .background(.purple)
+        .padding(10)
+        .background(.white.opacity(0.30))
         .overlay {
             if !game.isPlaying{
                 Button(action: {
@@ -38,7 +38,7 @@ struct GameGrid: View {
                         .font(.largeTitle)
                         .padding()
                         .foregroundStyle(.white)
-                        .background(.purple)
+                        .background(.blue.gradient)
                         .cornerRadius(12)
                 }
             }

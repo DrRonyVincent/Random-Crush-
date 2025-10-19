@@ -12,7 +12,7 @@ enum IconType: CaseIterable, Equatable {
     case empty
     case triangle
     case circle
-    case sqaure
+    case square
     case heart
     case row
     case column
@@ -20,7 +20,7 @@ enum IconType: CaseIterable, Equatable {
     case gift
     case bomb
     
-    var Color: Color {
+    var color: Color {
         switch self {
         case .empty:
                 .clear
@@ -28,7 +28,7 @@ enum IconType: CaseIterable, Equatable {
                 .orange
         case .circle:
                 .yellow
-        case .sqaure:
+        case .square:
                 .green
         case .heart:
                 .red
@@ -53,7 +53,7 @@ enum IconType: CaseIterable, Equatable {
             "triangle.fill"
         case .circle:
             "circle.fill"
-        case .sqaure:
+        case .square:
             "square.fill"
         case .heart:
             "heart.fill"
@@ -66,9 +66,19 @@ enum IconType: CaseIterable, Equatable {
         case .gift:
             "ladybug.fill"
         case .bomb:
-            "hazardsign.fill"
+            "BombIcon"
         }
     }
+    
+    
+    var isCustomImage: Bool {
+            switch self {
+            case .bomb:
+                return true
+            default:
+                return false
+            }
+        }
     
     
     static func random () -> IconType {
@@ -78,7 +88,7 @@ enum IconType: CaseIterable, Equatable {
     }
     
     static func core()-> [IconType]{
-        return[.circle,.triangle,.sqaure,.heart]
+        return[.circle,.triangle,.square,.heart]
     }
 }
 

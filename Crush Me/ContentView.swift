@@ -8,14 +8,31 @@
 import SwiftUI
 
 struct ContentView: View {
+    
+    @State var game = GameVM()
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationStack{
+            GeometryReader{ geo in
+                VStack{
+                    Console(game: game)
+                    TimerView(game: game, geo: geo)
+                    GameGrid(game: game)
+                    
+                    if game.combo != 0 {
+                        withAnimation(.easeInOut(duration: 0.4)){
+                            Text("Combo \(game.combo)!")
+                                .bold()
+                                .font(.largeTitle)
+                        }
+                    }
+                    Spacer()
+                }
+                .padding()
+                .background(LinearGradient(colors: [Color(.green), Color(.blue)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            }
+            .navigationTitle("Crush Me!")
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
-        .padding()
     }
 }
 

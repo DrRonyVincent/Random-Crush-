@@ -16,16 +16,18 @@ class GameVM {
     var combo = 0
     var isMatch = false
     var isProcessing = false
-    var gameTime = 30
+    var gameTime = 60
     var isPlaying = false
     var isStop = false
     var timer: Timer?
     var isGameOver = false
     var rows = 8
     var columns = 8
+    var isSettingUp = false
     var board: [[IconType]] = Array(repeating: Array(repeating: IconType.empty, count: 8), count: 8)
     var firstButtonnPressed: (row: Int, col: Int)? = nil
     var secondButtonnPressed: (row: Int, col: Int)? = nil
+    var bestScore: Int = UserDefaults.standard.integer(forKey: "bestScore")
     
     func fillGrid (){
         for row in 0..<rows {
@@ -45,24 +47,24 @@ class GameVM {
         return firstButtonnPressed != nil && secondButtonnPressed != nil
     }
     
-    func preventInitialMatches (){
-        var hasMadeChanges = true
-        
-        while hasMadeChanges {
-            hasMadeChanges = false
-            for row in 0..<rows {
-                for col in 0..<columns {
-                    let current = board[row][col]
-                    if hasMatch(row: row, col: col, type: current){
-                        board[row][col] = IconType.core().first{
-                            $0 != current
-                        } ?? .empty
-                        hasMadeChanges = true
-                    }
-                }
-            }
-        }
-    }
+//    func preventInitialMatches (){
+//        var hasMadeChanges = true
+//        
+//        while hasMadeChanges {
+//            hasMadeChanges = false
+//            for row in 0..<rows {
+//                for col in 0..<columns {
+//                    let current = board[row][col]
+//                    if hasMatch(row: row, col: col, type: current){
+//                        board[row][col] = IconType.core().first{
+//                            $0 != current
+//                        } ?? .empty
+//                        hasMadeChanges = true
+//                    }
+//                }
+//            }
+//        }
+//    }
     
     func hasMatch(row: Int, col: Int, type: IconType)-> Bool{
         let horizontal = (col >= 2 && board[row][col - 1] == type && board[row][col-2] == type ) || (col<columns-2 && board[row][col+1] == type && board[row][col+2] == type)
@@ -73,15 +75,37 @@ class GameVM {
         self.board =  Array(repeating: Array(repeating: IconType.empty, count: 8), count: 8)
         withAnimation(.easeInOut(duration: 0.3)){
             fillGrid()
-            preventInitialMatches()
+//            preventInitialMatches()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.fall()
+            }
+    }
+    
+    func timerStop(){
+        isStop = true
+        timer?.invalidate()
+        timer = nil
+    }
+    
+    func timerStarted(){
+        isStop = false
+        self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true){_ in
+            self.gameTime -= 1
+            if (self.gameTime == 0){
+                self.timer?.invalidate()
+                self.timer = nil
+                self.isPlaying = false
+            }   
         }
     }
     
     func gameStart () {
         self.score = 0
-        self.gameTime = 30
+        self.gameTime = 60
         isPlaying = true
-        
+        isSettingUp = true
+        self.timerStarted()
         setupBoard()
     }
     
@@ -90,7 +114,7 @@ class GameVM {
             for col in 0..<(columns-2) {
                 let type = board[row][col]
                 
-                if type != .empty && board[row][col+1] == type && board[row][col+2] == type {
+                if type != .empty && IconType.core().contains(type) && board[row][col+1] == type && board[row][col+2] == type {
                     checkList[row][col] = true
                     checkList[row][col+1] = true
                     checkList[row][col+2] = true
@@ -103,7 +127,7 @@ class GameVM {
             for col in 0..<columns{
                 let type = board[row][col]
                 
-                if type != .empty && board[row+1][col] == type && board[row+2][col] == type {
+                if type != .empty && IconType.core().contains(type) && board[row+1][col] == type && board[row+2][col] == type {
                     checkList[row][col] = true
                     checkList[row+1][col] = true
                     checkList[row+2][col] = true
@@ -116,6 +140,7 @@ class GameVM {
     func checkDead()-> Bool{
         for row in board{
             for cell in row{
+                
                 switch cell {
                 case .row, .column, .bang, .gift, .bomb:
                     return false
@@ -151,10 +176,11 @@ class GameVM {
         withAnimation(.easeInOut(duration:0.4)){
             board = Array(repeating: Array(repeating: IconType.empty, count: 8), count: 8)
         }
-        withAnimation(.easeInOut(duration: 0.4)){
-            fall()
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: {
+            self.fall()
+        })
     }
+    
     
     func runFunctionWithDelay(_ delay: Double, _ function: @escaping () -> Void) {
         Timer.scheduledTimer(withTimeInterval: delay, repeats: false){_ in
@@ -209,9 +235,6 @@ class GameVM {
     
     func setSpecialCellHorizontal (fromColumn: Int, toColumn: Int, row: Int){
         withAnimation(.easeInOut(duration: 0.4)){
-            for col in fromColumn..<toColumn {
-                board[row][col] = .empty
-            }
             board[row][toColumn] = .gift
         }
     }
@@ -224,9 +247,6 @@ class GameVM {
     
     func setSpecialVertical(fromRow: Int, toRow: Int, column: Int){
         withAnimation(.easeIn(duration: 0.4)){
-            for row in fromRow...toRow {
-                board[row][column] = .empty
-            }
             board[toRow][column] = .gift
         }
     }
@@ -245,12 +265,9 @@ class GameVM {
                 if checkList[row][column] && board[row][column] == board[row][column+1] && board[row][column] == board[row][column + 2] && board[row][column] == board[row][column + 3] && IconType.core().contains(board[row][column]){
                     for i  in 0..<4{
                         checkList[row][column + i] = false
-                        board[row][column + i]  = .empty
                     }
-                    
                     withAnimation(.easeInOut(duration:0.4)){
                         board[row][column] = .row
-                        
                     }
                 }
             }
@@ -261,7 +278,6 @@ class GameVM {
                 if checkList[row][column] && board[row][column] == board[row+1][column] && board[row][column] == board[row+2][column] && board[row][column] == board[row+3][column] && IconType.core().contains(board[row][column]){
                     for i in 0..<4 {
                         checkList[row + i][column] = false
-                        board[row + i][column] = .empty
                     }
                     withAnimation(.easeInOut(duration:0.4)){
                         board[row][column] = .column}
@@ -292,7 +308,6 @@ class GameVM {
                 }
             }
         }
-        
     }
     
     func markShapeMatchesAsSpecial(checkList: inout [[Bool]]){
@@ -326,7 +341,6 @@ class GameVM {
                             position in
                             if position.0 >= 0 && position.0 < rows && position.1 >= 0 && position.1 < columns {
                                 checkList[position.0][position.1] = false
-                                board[position.0][position.1] = .empty
                             }
                         }}
                     withAnimation(.easeInOut(duration: 0.4)){
@@ -353,54 +367,79 @@ class GameVM {
     
     func checkMatch() {
         var checkList = Array(repeating: Array(repeating: false, count: columns), count: rows)
+        self.isMatch = false
         
-        withAnimation(.easeInOut(duration: 0.5)){
-            markMatches(checkList: &checkList)
-            checkAndMarkSpecialMatches(checkList: &checkList)
-            markShapeMatchesAsSpecial(checkList: &checkList)
-            markFourMatches(checkList: &checkList)
-            processThreeInARow(checkList: &checkList)
+        markMatches(checkList: &checkList)
+        checkAndMarkSpecialMatches(checkList: &checkList)
+        markShapeMatchesAsSpecial(checkList: &checkList)
+        markFourMatches(checkList: &checkList)
+        processThreeInARow(checkList: &checkList)
+        let tilesCleared = self.board.flatMap{$0}.filter{$0 == .empty}.count
+        processThreeInARow(checkList: &checkList)
             
-            withAnimation(.easeInOut(duration: 0.3)){
-                clear(checkList: &checkList)
-            }
+        withAnimation(.easeInOut(duration: 0.3)){
+            clear(checkList: &checkList)
+        }
             
-            if isMatch{
-                runFunctionWithDelay(0.3){
+        DispatchQueue.main.asyncAfter(deadline: .now()+0.3){
+            if self.isMatch{
+                
+                if self.isSettingUp{
                     self.fall()
+                    return
                 }
-            }else {
-                if checkDead(){
-                    board.shuffle()
-                    runFunctionWithDelay(0.3){
-                        self.fall()
+                
+                let baseScorePerTile = 5
+                let comboBonus = self.combo > 0 ? (self.combo * 5): 0
+                let finalScore = (tilesCleared * baseScorePerTile) + comboBonus
+                            
+                self.score += finalScore
+                self.combo += 1
+                self.extendTimer(by: 1)
+                self.fall()
+                }
+            else {
+                if self.isSettingUp{
+                    self.isSettingUp = false
+                }
+                    if self.checkDead(){
+                        self.board.shuffle()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            self.fall()
+                        }
+                    }
+                    else {
+                        self.combo = 0
+                        self.isProcessing = false
                     }
                 }
-                isProcessing = false
             }
-        }
+        
     }
     
     func fall(){
         var didChange: Bool
-        repeat {
-            didChange = false
-            for row in 1..<rows{
-                for column in 0..<columns{
-                    if board[row][column] == .empty && board[row-1][column] != .empty {
-                        (board[row][column], board[row-1][column]) = (board[row - 1][column], board[row][column])
-                        didChange = true
+        
+            repeat {
+                didChange = false
+                for row in 1..<rows{
+                    for column in 0..<columns{
+                        if board[row][column] == .empty && board[row-1][column] != .empty {
+                            (board[row][column], board[row-1][column]) = (board[row - 1][column], board[row][column])
+                            didChange = true
+                        }
                     }
                 }
-            }
-            for col in 0..<columns where board[0][col] == .empty{
-                board[0][col] = IconType.random()
-                didChange = true
-            }
-        }while didChange
+                for col in 0..<columns where board[0][col] == .empty{
+                    board[0][col] = IconType.random()
+                    didChange = true
+                }
+            }while didChange
         
-        isMatch = false
-        runFunctionWithDelay(0.3) {
+        withAnimation(.easeInOut(duration: 0.3)){}
+    
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.isMatch = false
             self.checkMatch()
         }
     }
@@ -550,7 +589,7 @@ class GameVM {
         isMatch = true
         board[firstRowIndex][firstColIndex] = .empty
         board[secRowIndex][secColIndex] = .empty
-        
+ 
         let random = IconType.random()
         
         for row in 0..<rows{
@@ -563,16 +602,17 @@ class GameVM {
         for row in 0..<rows{
             for col in 0..<columns{
                 if board[row][col] == .bomb{
-                    self.bomb(rowIndex: row, columnIndex: col)
+                    withAnimation(.easeInOut(duration: 0.3)){
+                        self.bomb(rowIndex: row, columnIndex: col)}
                 }
             }
         }
-    }
+            }
     
     func gift (rowIndex: Int, colIndex: Int, icon: IconType){
         isMatch = true
         board[rowIndex][colIndex] = .empty
-        
+
         for row in 0..<rows{
             for col in 0..<columns{
                 if board[row][col] == icon{
@@ -586,7 +626,7 @@ class GameVM {
         isMatch = true
         board[firstRowIndex][firstColIndex] = .empty
         board[secRowIndex][secColIndex] = .empty
-        
+
         self.rowActivate(rowIndex: firstRowIndex, colIndex: firstColIndex)
         self.colActivate(rowIndex: firstRowIndex, colIndex: firstColIndex)
         withAnimation(.easeInOut(duration: 0.3)){
@@ -630,15 +670,14 @@ class GameVM {
             fall()
         }
     }
+    
     func tryProcess (row: Int, col: Int){
         if firstButtonnPressed == nil {
             firstButtonnPressed = (row, col)
         } else if secondButtonnPressed == nil {
             secondButtonnPressed = (row, col)
-            
-            if let(rowOrigin, colOrigin) = firstButtonnPressed, let (rowDestination, colDestination) = secondButtonnPressed
-            {
-                process(rowOrigin:rowOrigin,colOrigin:colOrigin,rowDestination:rowDestination,colDestination:colDestination)
+                if let first = firstButtonnPressed, let sec = secondButtonnPressed{
+                    process(rowOrigin: first.row, colOrigin: first.col, rowDestination: sec.row, colDestination: sec.col)
             }
             firstButtonnPressed = nil
             secondButtonnPressed = nil
@@ -676,7 +715,7 @@ class GameVM {
         else if right == .row {self.rowActivate(rowIndex: rowDestination, colIndex: colDestination)}
         else if right == .column {self.colActivate(rowIndex: rowDestination, colIndex: colDestination)}
         else {
-            runFunctionWithDelay(0.4){
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 self.checkMatch()
                 if !self.isMatch {
                     withAnimation(.easeInOut(duration: 0.4)){
@@ -691,5 +730,20 @@ class GameVM {
             fall()
         }
     }
+    
+    func extendTimer(by seconds: Int){
+        self.gameTime = min(200, (self.gameTime) + seconds)
+    }
+    
+    func countClearedTiles() -> Int {
+        var countTiles = 0
+        for row in 0..<rows{
+            for col in 0..<columns{
+                if board[row][col] == .empty {
+                    countTiles += 1
+                }
+            }
+        }
+        return countTiles
+    }
 }
-
